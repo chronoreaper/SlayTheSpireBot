@@ -34,7 +34,7 @@ class WindowCapture:
         border_pixels = 8
         titlebar_pixels = 30
         self.w = self.w - (border_pixels * 2)
-        #self.h = self.h - titlebar_pixels - border_pixels
+        self.h = self.h - titlebar_pixels - border_pixels
         self.cropped_x = border_pixels
         self.cropped_y = titlebar_pixels
 
@@ -44,7 +44,7 @@ class WindowCapture:
         self.offset_y = window_rect[1] + self.cropped_y
 
     def get_screenshot(self):
-        img = ImageGrab.grab(bbox=(self.cropped_x, self.cropped_y,self.w, self.h)) #bbox specifies specific region (bbox= x,y,width,height *starts top-left)
+        img = ImageGrab.grab(bbox=(self.offset_x, self.offset_y, self.w + self.offset_x, self.h + self.offset_y)) #bbox specifies specific region (bbox= x,y,width,height *starts top-left)
         img_np = np.array(img) #this is the array obtained from conversion
         return cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
 

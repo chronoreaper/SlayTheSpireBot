@@ -19,14 +19,18 @@ def Click(x,y):
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,x,y,0,0)
 
 def CenterMouse():
-    x = wincap.cropped_x + (int)(wincap.w / 2)
-    y = wincap.cropped_y + (int)(wincap.h / 2)
+    x = wincap.offset_x + (int)(wincap.w / 2)
+    y = wincap.offset_y + (int)((wincap.h)/ 2)
     win32api.SetCursorPos((x,y))
 
+def MoveMouseOffScreen():
+    win32api.SetCursorPos((0,0))
 
-def FindImage(image, show = False, click = True, threshold = .8):
+def FindImage(image, show = False, click = True, threshold = .6):
     screenshot = wincap.get_screenshot()
     image = cv2.imread('img/' + image + '.PNG')
+    if len(image) <= 0:
+        return False, (0, 0)
     h, w = image.shape[:-1]
     pos = (0, 0)
 
@@ -35,7 +39,7 @@ def FindImage(image, show = False, click = True, threshold = .8):
     if (len(loc[0]) > 0):
         for pt in zip(*loc[::-1]):  # Switch collumns and rows
             cv2.rectangle(screenshot, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
-            pos = (pt[0] + 1 + (int)(w / 2), pt[1] + 4 + (int)(h))
+            pos = (pt[0] + 1 + (int)(w / 2) + wincap.offset_x - wincap.cropped_x, pt[1] + 4 + (int)(h) + wincap.offset_y - wincap.cropped_y)
 
     if (show):
         cv2.imshow('screen', screenshot)
@@ -73,13 +77,26 @@ def NavigateMainMenu():
     time.sleep(1)
 
 def NavigateMap():
-    event = 0
-    if FindImage("Map_Enemy")[0]:
-        print("Goto enemy")
-        event = 0
-    elif FindImage("Map_Unknown")[0]:
-        print("Goto unknown")
-        event = 1
+    event = -1
+    tries = 3
+    while event == -1 and tries > 0:
+        if FindImage("Map_Rest")[0]:
+            print("Goto unknown")
+            event = 4
+        elif FindImage("Map_Merchant")[0]:
+            print("Goto unknown")
+            event = 3
+        elif FindImage("Map_Unknown")[0]:
+            print("Goto unknown")
+            event = 1
+        elif FindImage("Map_Enemy")[0]:
+            print("Goto enemy")
+            event = 0
+        elif FindImage("Map_Chest")[0]:
+            print("Goto unknown")
+            event = 2
+        time.sleep(0.2)
+        tries -= 1
     time.sleep(1)
     return event
 
@@ -88,9 +105,9 @@ def NavigateMap():
 #############################
 
 
-CARD_NAMES = ["Bash", "Strike", "Defend"]
+CARD_NAMES = ["Shrug", "Clothsline", "Bash", "ThunderClap", "TwinStrike", "Strike", "Defend"]
 KEYS = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE]
-ENEMIES = ["Cultist", "SpikeSlimeS", "AcidSlimeM", "JawWorm", "Louse"]
+ENEMIES = ["Cultist", "SpikeSlimeS", "AcidSlimeM", "JawWorm", "Louse", "AcidSlimeS", "FatGremlin", "Slaver", "SneakyGremlin"]
 
 def Combat():
     enemies = GetEnemies()
@@ -100,13 +117,16 @@ def Combat():
         energy = 3
         # Main Turn loop
         while (energy > 0 and len(enemies) > 0):
+            cardPlay = False
             hand = GetHand()
             time.sleep(0.3)
             for card in CARD_NAMES:
                 if (card in hand):
                     PlayAttack(KEYS[hand.index(card)], enemies[0])
+                    cardPlay = True
                     break
-            energy -= 1
+            if not cardPlay:
+                energy = 0
             time.sleep(0.5)
             enemies = GetEnemies()
             
@@ -118,10 +138,10 @@ def Combat():
 def GetHand():
     print("Cards in Hand")
     CenterMouse()
-    cards = [''] * 6 # 10 There should be 10. doing 5 for now
+    cards = [''] * 10
     for i in range(len(cards)):
         pushKey(KEYS[i])
-        time.sleep(0.6)
+        time.sleep(0.5)
         for card in CARD_NAMES:
             if (FindImage("Combat_" + card, click=False)[0]):
                 print(card)
@@ -155,27 +175,89 @@ class Enemy:
         self.name = name
         self.pos = pos
 
+##########################################
+#        Rewards
+#######################################
+
+CARD_REWARDS = ["IronWave", "Pummel", "Rage", "Shrug", "Headbut", "BloodforBlood", "Bloodletting", "TwinStrike", "ThunderStrike", "WildStrike"]
+
 def Rewards():
     # Rewards
-    # Skip rewards
-    print("Skip Rewards")
-    FindImage("Reward_Skip")
+    print("pick up gold")
+    FindImage("Reward_Gold")
+
+    # Pick up card
+    print("Pick up card")
+    FindImage("Reward_Card")
+    MoveMouseOffScreen()
+    time.sleep(1)
+
+    foundCard = False
+    for card in CARD_REWARDS:
+        if FindImage("Reward_Card_" + card)[0]:
+            foundCard = True
+            break
+    if not foundCard:
+    # Skip card
+        print("Skip Card")
+        FindImage("Reward_SkipCard")
+        time.sleep(1)
+        FindImage("Reward_SkipCard2")
+    else:
+        print("proceed")
+        FindImage("Reward_Proceed")
+
+    # print("Skip Rewards")
+    # FindImage("Reward_Skip")
+
 #####################################
 #           Events
 ####################################
 
+EVENTS = ["Heal", "Leave", "Attack"]
+
 def Event():
-    while FindImage("Event_Leave")[0]:
-        print("Press Leave")
+    clicked = True
+    while clicked:
+        for event in EVENTS:
+            clicked = FindImage("Event_" + event)[0]
+            if clicked:
+                break
         time.sleep(1)
-    FindImage("Event_Attack")
+
+#####################################
+#              Shop
+####################################
+
+def Shop():
+    FindImage("Shop_Skip")
     time.sleep(1)
+
+######################################
+#          Chest
+##################################
+
+def Chest():
+    time.sleep(2)
+
+    print("Skip chest")
+    FindImage("Tresure_Skip")
+
+######################################
+#          Rest
+##################################
+
+def Rest():
+    FindImage("Rest_Rest")
+    time.sleep(2)
+    FindImage("Shop_Proceed")
+
 
 # Main loop
 time.sleep(2)
-NavigateMainMenu()
+#NavigateMainMenu()
 # NavigateMap()
-# Combat()
+Combat()
 
 isGameover = FindImage("End_Continue")[0]
 
@@ -185,6 +267,12 @@ while not isGameover:
         Combat()
     elif event == 1:
         Event()
+    elif event == 2:
+        Rest()
+    elif event == 3:
+        Shop()
+    elif event == 4:
+        Chest()
     isGameover = FindImage("End_Continue")[0]
 
 FindImage("End_MainMenu")
