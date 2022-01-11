@@ -109,20 +109,11 @@ def Combat():
             energy -= 1
             time.sleep(0.5)
             enemies = GetEnemies()
-            if FindImage("Reward_Skip")[0]:
-                return
             
         pushKey(E)
         time.sleep(6)
-
-    if FindImage("Reward_Skip")[0]:
-        return
-
     
-    # Rewards
-    # Skip rewards
-    print("Skip Rewards")
-    FindImage("Reward_Skip")
+    Rewards()
 
 def GetHand():
     print("Cards in Hand")
@@ -137,10 +128,6 @@ def GetHand():
                 cards[i] = card
                 break
         pushKey(KEYS[i])
-
-        # if no more cards skip the rest
-        # if card[i] == '':
-        #     break
     
     return cards
 
@@ -168,6 +155,11 @@ class Enemy:
         self.name = name
         self.pos = pos
 
+def Rewards():
+    # Rewards
+    # Skip rewards
+    print("Skip Rewards")
+    FindImage("Reward_Skip")
 #####################################
 #           Events
 ####################################
