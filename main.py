@@ -24,38 +24,44 @@ def CenterMouse():
     win32api.SetCursorPos((x,y))
 
 def MoveMouseOffScreen():
-    win32api.SetCursorPos((0,0))
+    win32api.SetCursorPos((wincap.offset_x ,wincap.offset_y))
+    time.sleep(1)
 
-def FindImage(image, show = False, click = True, threshold = .6):
+def FindImage(image, show = False, click = True, threshold = 0.7, tries = 1):
     screenshot = wincap.get_screenshot()
     image = cv2.imread('img/' + image + '.PNG')
-    if len(image) <= 0:
+    if image is None:
         return False, (0, 0)
     h, w = image.shape[:-1]
     pos = (0, 0)
 
-    res = cv2.matchTemplate(screenshot, image, cv2.TM_CCOEFF_NORMED)
-    loc = np.where(res >= threshold)
-    if (len(loc[0]) > 0):
-        for pt in zip(*loc[::-1]):  # Switch collumns and rows
-            cv2.rectangle(screenshot, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
-            pos = (pt[0] + 1 + (int)(w / 2) + wincap.offset_x - wincap.cropped_x, pt[1] + 4 + (int)(h) + wincap.offset_y - wincap.cropped_y)
+    loc = [[]]
+    while tries > 0 and len(loc[0]) == 0:
+        res = cv2.matchTemplate(screenshot, image, cv2.TM_CCOEFF_NORMED)
+        loc = np.where(res >= threshold)
+        if (len(loc[0]) > 0):
+            for pt in zip(*loc[::-1]):  # Switch collumns and rows
+                cv2.rectangle(screenshot, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
+                pos = (pt[0] + 1 + (int)(w / 2) + wincap.offset_x - wincap.cropped_x, pt[1] + 4 + (int)(h) + wincap.offset_y - wincap.cropped_y)
 
-    if (show):
-        cv2.imshow('screen', screenshot)
-        cv2.waitKey(0)
+        if (show):
+            cv2.imshow('screen', screenshot)
+            cv2.waitKey(0)
 
-    if (len(loc[0]) > 0):    
-        if (click):
-            # Press twice in case
-            Click(pos[0], pos[1])
-            time.sleep(0.1)
-            Click(pos[0], pos[1])
+        if (len(loc[0]) > 0):    
+            if (click):
+                # Press twice in case
+                Click(pos[0], pos[1])
+                time.sleep(0.1)
+                Click(pos[0], pos[1])
+        time.sleep(0.2)
+        tries -= 1
+
     return len(loc[0]) > 0, pos
 
 def NavigateMainMenu():
     print("Press Play")
-    FindImage("Menu_Play")
+    FindImage("Menu_Play", tries = 5)
     time.sleep(1)
     print("Press Standard")
     FindImage("Menu_Standard")
@@ -63,28 +69,31 @@ def NavigateMainMenu():
     print("Press IronClad")
     FindImage("Menu_Iron")
     time.sleep(1)
+    MoveMouseOffScreen()
     print("Press Embark")
     FindImage("Menu_Embark")
-    time.sleep(3)
+    time.sleep(10)
     print("Press Talk")
     FindImage("Menu_Talk")
     time.sleep(1)
     print("Press 7 Max HP")
     FindImage("Menu_7Max")
     time.sleep(1)
+    MoveMouseOffScreen()
     print("Press Leave")
-    FindImage("Menu_Leave")
+    FindImage("Menu_Leave", tries=3)
     time.sleep(1)
 
 def NavigateMap():
+    print("Navigate Map")
     event = -1
-    tries = 3
+    tries = 99
     while event == -1 and tries > 0:
         if FindImage("Map_Rest")[0]:
-            print("Goto unknown")
+            print("Goto Rest")
             event = 4
         elif FindImage("Map_Merchant")[0]:
-            print("Goto unknown")
+            print("Goto Merchant")
             event = 3
         elif FindImage("Map_Unknown")[0]:
             print("Goto unknown")
@@ -93,9 +102,9 @@ def NavigateMap():
             print("Goto enemy")
             event = 0
         elif FindImage("Map_Chest")[0]:
-            print("Goto unknown")
+            print("Goto Chest")
             event = 2
-        time.sleep(0.2)
+        time.sleep(0.1)
         tries -= 1
     time.sleep(1)
     return event
@@ -110,6 +119,7 @@ KEYS = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE]
 ENEMIES = ["Cultist", "SpikeSlimeS", "AcidSlimeM", "JawWorm", "Louse", "AcidSlimeS", "FatGremlin", "Slaver", "SneakyGremlin"]
 
 def Combat():
+    MoveMouseOffScreen()
     enemies = GetEnemies()
 
     # Main Combat loop
@@ -127,11 +137,14 @@ def Combat():
                     break
             if not cardPlay:
                 energy = 0
-            time.sleep(0.5)
+            time.sleep(1)
+            MoveMouseOffScreen()
             enemies = GetEnemies()
             
         pushKey(E)
         time.sleep(6)
+        MoveMouseOffScreen()
+        enemies = GetEnemies()
     
     Rewards()
 
@@ -186,6 +199,7 @@ def Rewards():
     print("pick up gold")
     FindImage("Reward_Gold")
 
+    time.sleep(1)
     # Pick up card
     print("Pick up card")
     FindImage("Reward_Card")
@@ -204,8 +218,9 @@ def Rewards():
         time.sleep(1)
         FindImage("Reward_SkipCard2")
     else:
+        time.sleep(1)
         print("proceed")
-        FindImage("Reward_Proceed")
+        FindImage("Reward_Proceed", tries=3)
 
     # print("Skip Rewards")
     # FindImage("Reward_Skip")
@@ -222,6 +237,7 @@ def Event():
         for event in EVENTS:
             clicked = FindImage("Event_" + event)[0]
             if clicked:
+                print("Clicked "  + event)
                 break
         time.sleep(1)
 
@@ -255,10 +271,7 @@ def Rest():
 
 # Main loop
 time.sleep(2)
-#NavigateMainMenu()
-# NavigateMap()
-Combat()
-
+NavigateMainMenu()
 isGameover = FindImage("End_Continue")[0]
 
 while not isGameover:
