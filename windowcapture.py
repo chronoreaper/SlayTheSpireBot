@@ -1,6 +1,7 @@
 import numpy as np
 import win32gui, win32ui, win32con
-
+from PIL import ImageGrab
+import cv2
 
 class WindowCapture:
 
@@ -33,7 +34,7 @@ class WindowCapture:
         border_pixels = 8
         titlebar_pixels = 30
         self.w = self.w - (border_pixels * 2)
-        self.h = self.h - titlebar_pixels - border_pixels
+        #self.h = self.h - titlebar_pixels - border_pixels
         self.cropped_x = border_pixels
         self.cropped_y = titlebar_pixels
 
@@ -43,6 +44,9 @@ class WindowCapture:
         self.offset_y = window_rect[1] + self.cropped_y
 
     def get_screenshot(self):
+        img = ImageGrab.grab(bbox=(self.cropped_x, self.cropped_y,self.w, self.h)) #bbox specifies specific region (bbox= x,y,width,height *starts top-left)
+        img_np = np.array(img) #this is the array obtained from conversion
+        return cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
 
         # get the window image data
         wDC = win32gui.GetWindowDC(self.hwnd)
