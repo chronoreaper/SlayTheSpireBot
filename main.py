@@ -55,7 +55,7 @@ def FindImage(image, show = False, click = True, threshold = 0.8, tries = 1):
                 time.sleep(0.1)
                 Click(pos[0], pos[1])
         if (tries > 1):
-            time.sleep(0.2)
+            time.sleep(0.1)
         tries -= 1
 
     return len(loc[0]) > 0, pos
@@ -70,10 +70,9 @@ def NavigateMainMenu():
     print("Press IronClad")
     FindImage("Menu_Iron")
     time.sleep(1)
-    MoveMouseOffScreen()
     print("Press Embark")
     FindImage("Menu_Embark")
-    time.sleep(6)
+    time.sleep(3)
     print("Press Talk")
     FindImage("Menu_Talk")
     time.sleep(1)
@@ -119,57 +118,83 @@ def NavigateMap():
 #############################
 
 
-CARD_NAMES = ["Shrug", "IronWave", "Clothsline", "Cleave", "Bash", "ThunderClap", "TwinStrike", "WildStrike", "Strike", "Defend", "Bloodletting"]
+CARD_NAMES = ["Bash", "ThunderClap", "PerfectedStrike", "Shrug", "IronWave", "Clothsline", "Cleave", "TwinStrike", "WildStrike", "Strike", "Defend", "Bloodletting", "Anger"]
 KEYS = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE]
-ENEMIES = ["GremlinWizard", "Cultist", "SpikeSlimeS", "AcidSlimeM", "JawWorm", "Louse", "Louse2", "AcidSlimeS", "FatGremlin", "Slaver", "SneakyGremlin", "AngryGremlin", "Nob", "Sentry",
-    "AcidSlimeL", "Fungi", "TheGuardian", "TheGuardian2"]
+ENEMIES = ["GremlinWizard", "ShieldGremlin", "Cultist", "SpikeSlimeS", "AcidSlimeM", "JawWorm", "Louse", "Louse2", "Louse3", "AcidSlimeS", "FatGremlin", "Slaver", "SneakyGremlin", "AngryGremlin", "Nob", "Sentry",
+    "AcidSlimeL", "Fungi", "TheGuardian", "TheGuardian2", "Lagavulin", "Lagavulin2", "Looter"]
 
 def Combat():
     MoveMouseOffScreen()
     enemies = GetEnemies()
-
+    RewardScreen = False
     # Main Combat loop
     while len(enemies) > 0:
         energy = 3
         # Main Turn loop
         while (energy > 0 and len(enemies) > 0):
-            cardPlay = False
-            hand = GetHand()
-            time.sleep(0.1)
+            hand = GetHand([''] * 6)
             for card in CARD_NAMES:
-                if (card in hand):
-                    PlayAttack(KEYS[hand.index(card)], enemies[0])
-                    cardPlay = True
-                    break
-            if not cardPlay:
-                energy = 0
-            time.sleep(0.1)
-            MoveMouseOffScreen()
-            enemies = GetEnemies()
+                isPlaying = True
+                while (card in hand and isPlaying and len(enemies) > 0):
+                    index = hand.index(card)
+                    if (IsPlayable(card, index)):
+                        print("Playing " + card)
+                        PlayAttack(enemies[0])
+                        hand.pop(index)
+                        hand.append('')
+                        time.sleep(0.1)
+                        MoveMouseOffScreen()
+                        enemies = GetEnemies()
+                        CenterMouse()
+                        if len(enemies) > 0:
+                            hand = GetHand(hand)
+                    else:
+                        isPlaying = False
+            energy = 0
+            # MoveMouseOffScreen()
+            # enemies = GetEnemies()
 
-        print("End Turn")
-        pushKey(E)
-        time.sleep(3)
         MoveMouseOffScreen()
         enemies = GetEnemies()
+        if (len(enemies) > 0):
+            print("End Turn")
+            pushKey(E)
+            time.sleep(3)
+        MoveMouseOffScreen()
+        enemies = GetEnemies()
+        # Just to be sure
+        if (len(enemies) == 0):
+            #if not FindImage("Reward_Screen", click=False)[0]:
+            time.sleep(0.1)
+            enemies = GetEnemies()
     
     Rewards()
 
-def GetHand():
+def IsPlayable(name, index):
+    isPlayable = False
+    pushKey(KEYS[index])
+    time.sleep(0.1)
+    if (FindImage("Combat_" + name, click=False, threshold=0.6)[0]):
+        isPlayable = True
+    time.sleep(0.1)
+    return isPlayable
+
+def GetHand(hand = [''] * 6):
     print("Cards in Hand")
+    time.sleep(0.1)
     CenterMouse()
-    cards = [''] * 6 # 10
-    for i in range(len(cards)):
-        pushKey(KEYS[i])
-        time.sleep(0.1)
-        for card in CARD_NAMES:
-            if (FindImage("Combat_" + card, click=False, threshold=0.6)[0]):
-                print(card)
-                cards[i] = card
-                break
-        pushKey(KEYS[i])
+    for i in range(len(hand)):
+        if hand[i] == '':
+            pushKey(KEYS[i])
+            time.sleep(0.1)
+            for card in CARD_NAMES:
+                if (FindImage("Combat_" + card, click=False, threshold=0.6)[0]):
+                    print(card)
+                    hand[i] = card
+                    break
+            pushKey(KEYS[i])
     
-    return cards
+    return hand
 
 def GetEnemies():
     enemies = []
@@ -179,14 +204,12 @@ def GetEnemies():
             enemies.append(Enemy(enemy, pos))
     return enemies
 
-def PlayAttack(hotkey, enemy):
+def PlayAttack(enemy):
     print("Attacking " + enemy.name)
-    pushKey(hotkey)
-    time.sleep(0.2)
     # Just to be sure
     for _ in range(3):
         Click(enemy.pos[0], enemy.pos[1])
-        time.sleep(0.1)
+        time.sleep(0.05)
 
 class Enemy:
     name = ""
@@ -199,7 +222,7 @@ class Enemy:
 #        Rewards
 #######################################
 
-CARD_REWARDS = ["IronWave", "Cleave", "Pummel", "Rage", "Shrug", "BloodforBlood", "TwinStrike", "ThunderStrike", "WildStrike", "Bloodletting"]
+CARD_REWARDS = ["PerfectedStrike", "Anger", "IronWave", "Cleave", "Pummel", "Rage", "Shrug", "BloodforBlood", "TwinStrike", "ThunderClap", "WildStrike", "Bloodletting"]
 
 def Rewards():
     # Rewards
@@ -295,6 +318,7 @@ def Rest():
 
 # Main loop
 time.sleep(2)
+#Combat()
 NavigateMainMenu()
 isGameover = FindImage("End_Continue")[0]
 
